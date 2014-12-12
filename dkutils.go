@@ -47,9 +47,11 @@ func ForceType(v interface{}, d interface{}) error {
 	vvalue := reflect.Indirect(ptrvalue)
 
 	if !vvalue.CanAddr() {
-		msg = "ForceType: v is type " + vtype.String() +
-			". It must be a pointer!"
-		panic(ErrDkutilsGeneric(msg))
+		if !vvalue.CanSet() {
+			msg = "ForceType: vvalue cannot be Set!"
+			panic(ErrDkutilsGeneric(msg))
+		}
+		vvalue.Set(reflect.ValueOf(niltype{}))
 
 	} else {
 		if fmt.Sprint(vvalue.Addr()) != "<*interface {} Value>" {
