@@ -2,6 +2,7 @@ package dkutils
 
 import (
 	"fmt"
+	"github.com/dankozitza/go-convert"
 	"reflect"
 )
 
@@ -111,33 +112,27 @@ type Checker interface {
 	// the Check function will be called on any non-iterable expected, variable
 	// pair found.
 	//
-	Check(expected interface{}, variable interface{}) error
+	Check(expected interface{}, variable interface{}) (interface{}, error)
 }
 
 // DeepTypeCheck
 //
-//	This function is used to crawl through an expected or 'template' data
+// This function is used to crawl through an expected or 'template' data
 // structure and compare it to an unknown data structure to check their contents
 // against one another. When non-iterable data types are found they are passed
 // to a Checker. If a Checker returns an error DeepTypeCheck stops crawling
 // and returns the error to the caller.
 //
-// TODO: A checker can also return a new variable which will replace
-//       whatever 'variable' parameter was passed in.
-//
-func DeepTypeCheck(expected interface{}, variable interface{}, c Checker) error {
+func DeepTypeCheck(expected interface{}, variable interface{}, c Checker) (ret interface{}, err error) {
 
 	if expected == nil && variable == nil {
-		fmt.Println("expected and variable are nil")
-		return nil
+		return nil, fmt.Errorf("expected and variable are nil")
 	}
 	if expected == nil && variable != nil {
-		fmt.Println("only expected is nil")
-		return nil
+		return nil, fmt.Errorf("expected is nil")
 	}
 	if expected != nil && variable == nil {
-		fmt.Println("only variable is nil")
-		return nil
+		return nil, fmt.Errorf("variable is nil")
 	}
 
 	var msg string
@@ -154,7 +149,7 @@ func DeepTypeCheck(expected interface{}, variable interface{}, c Checker) error 
 	//		}
 	//	}
 
-	fmt.Println("Before pointer removal: etype: " + etype.String() + ", vtype: " + vtype.String())
+	//fmt.Println("Before pointer removal: etype: " + etype.String() + ", vtype: " + vtype.String())
 
 	// check if etype is a pointer and set evalue
 	var evalue reflect.Value
@@ -199,52 +194,76 @@ func DeepTypeCheck(expected interface{}, variable interface{}, c Checker) error 
 			msg = "DeepTypeCheck: expected reflect.Kind " +
 				fmt.Sprint(etype.Kind()) + " but found " +
 				fmt.Sprint(vtype.Kind())
-			return ErrDkutilsGeneric(msg)
+			return nil, ErrDkutilsGeneric(msg)
 
 		default:
-			return c.Check(evalue.Interface(), vvalue.Interface())
+			ret, err = c.Check(evalue.Interface(), vvalue.Interface())
+			if err != nil {
+				return nil, err
+			}
+			fmt.Println("DeepTypeCheck: setting vvalue")
+
+			// this causes panic when vvalue is unaddressable
+			//vvalue.Set(reflect.ValueOf(r))
+
+			return ret, nil
 		}
 	}
 
 	switch etype.Kind() {
 	case reflect.Map:
 
+		// make sure the return is the correct type
+		ret = map[string]interface{}{}
+
 		newexp, ok := evalue.Interface().(map[string]interface{})
 		if !ok {
 			msg = "DeepTypeCheck: maps are expected to be of type " +
 				"map[string]interface{} not type " + etype.String()
-			return ErrDkutilsGeneric(msg)
+			return nil, ErrDkutilsGeneric(msg)
 		}
 		newvar, ok := vvalue.Interface().(map[string]interface{})
 		if !ok {
 			msg = "DeepTypeCheck: maps are expected to be of type " +
 				"map[string]interface{} not type " + vtype.String()
-			return ErrDkutilsGeneric(msg)
+			return nil, ErrDkutilsGeneric(msg)
 		}
 
 		fmt.Println("etype.Kind():", etype.Kind(), "vtype.Kind():", vtype.Kind())
 
 		for k, _ := range newexp {
-			fmt.Println("-\ngoing deeper into expected key:", k, ", val:", newexp[k])
-			err := DeepTypeCheck(newexp[k], newvar[k], c)
-			if err != nil {
-				return err
+
+			// this is hardcoded for jobdist
+			if k == "links" {
+				ret.(map[string]interface{})[k] = newexp[k]
+				continue
 			}
+
+			fmt.Println("-\ngoing deeper into expected key:", k, ", val:", newexp[k])
+			r, err := DeepTypeCheck(newexp[k], newvar[k], c)
+			if err != nil {
+				return nil, ErrDkutilsGeneric("DeepTypeCheck: While checking " +
+					"expected key " + k + ": " + err.Error())
+			}
+			ret.(map[string]interface{})[k] = r
 		}
 
 	case reflect.Slice:
+
+		// make sure the return is the correct type
+		ret = []interface{}{}
 
 		newexp, ok := evalue.Interface().([]interface{})
 		if !ok {
 			msg = "DeepTypeCheck: slices are expected to be of type " +
 				"[]interface{} not type " + etype.String()
-			return ErrDkutilsGeneric(msg)
+			return nil, ErrDkutilsGeneric(msg)
 		}
 		newvar, ok := vvalue.Interface().([]interface{})
 		if !ok {
 			msg = "DeepTypeCheck: slices are expected to be of type " +
 				"[]interface{} not type " + vtype.String()
-			return ErrDkutilsGeneric(msg)
+			return nil, ErrDkutilsGeneric(msg)
 		}
 
 		// check that lengths are the same
@@ -253,27 +272,100 @@ func DeepTypeCheck(expected interface{}, variable interface{}, c Checker) error 
 		if elen != vlen {
 			msg = fmt.Sprint("DeepTypeCheck: expected slice of length ", elen,
 				" but found slice of length ", vlen)
-			return ErrDkutilsGeneric(msg)
+			return nil, ErrDkutilsGeneric(msg)
 		}
 
 		fmt.Println("etype.Kind():", etype.Kind(), "vtype.Kind:", vtype.Kind())
 
 		for i, _ := range newexp {
 			fmt.Println("-\ngoing deeper into expected index:", i, ", val:", newexp[i])
-			err := DeepTypeCheck(newexp[i], newvar[i], c)
+			r, err := DeepTypeCheck(newexp[i], newvar[i], c)
 			if err != nil {
-				return err
+				return nil, err
 			}
+			ret.([]interface{})[i] = r
 		}
 
 	default:
 
 		// now call c.Check()
-		fmt.Println("etype.Kind():", etype.Kind(), "vtype.Kind:", vtype.Kind())
-		fmt.Println("did the default")
+		fmt.Println("!!!!did the default")
 
-		return nil
+		ret, err = c.Check(evalue.Interface(), vvalue.Interface())
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return nil
+	fmt.Println("~~~got to end!")
+	return ret, nil
+}
+
+// Persuader
+//
+// Used by DeepTypePeruade() to convert v to whatever type e is. Covers string
+// and int types.
+//
+type Persuader struct{}
+
+func (p Persuader) Check(e interface{}, v interface{}) (converted interface{}, err error) {
+
+	switch e.(type) {
+	case int:
+		r, err := convert.Int(v)
+		if err != nil {
+			return nil, ErrDkutilsGeneric("Persuader.Check: could not convert: " +
+				err.Error())
+		}
+		return r, nil
+
+	case int32:
+		r, err := convert.Int32(v)
+		if err != nil {
+			return nil, ErrDkutilsGeneric("Persuader.Check: could not convert: " +
+				err.Error())
+		}
+		return r, nil
+
+	case int64:
+		r, err := convert.Int64(v)
+		if err != nil {
+			return nil, ErrDkutilsGeneric("Persuader.Check: could not convert: " +
+				err.Error())
+		}
+		return r, nil
+
+	case float32:
+		r, err := convert.Float32(v)
+		if err != nil {
+			return nil, ErrDkutilsGeneric("Persuader.Check: could not convert: " +
+				err.Error())
+		}
+		return r, nil
+
+	case float64:
+		r, err := convert.Float64(v)
+		if err != nil {
+			return nil, ErrDkutilsGeneric("Persuader.Check: could not convert: " +
+				err.Error())
+		}
+		return r, nil
+
+	case string:
+		r, err := convert.String(v)
+		if err != nil {
+			return nil, ErrDkutilsGeneric("Persuader.Check: could not convert: " +
+				err.Error())
+		}
+		return r, nil
+
+	default:
+		return nil, ErrDkutilsGeneric("Persuader.Check: unknown type")
+
+	}
+}
+
+func DeepTypePersuade(expected interface{}, variable interface{}) (interface{}, error) {
+	var p Persuader
+	return DeepTypeCheck(expected, variable, p)
 }

@@ -2,6 +2,7 @@ package dkutils
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 )
 
@@ -111,7 +112,7 @@ func TestKind(t *testing.T) {
 		new(string),
 		new(string)}
 	var testvar4 interface{} = "horse"
-	err := DeepTypeCheck(expected4, testvar4, tc)
+	_, err := DeepTypeCheck(expected4, &testvar4, tc)
 	if err != nil {
 		fmt.Println("DeepTypeCheck returned error: " + err.Error())
 	} else {
@@ -138,7 +139,7 @@ func TestMapTypes(t *testing.T) {
 		"twelve": 12,
 		"three":  3}
 
-	err := DeepTypeCheck(expected3, testvar3, tc)
+	_, err := DeepTypeCheck(expected3, &testvar3, tc)
 	if err != nil {
 		fmt.Println("DeepTypeCheck returned error: " + err.Error())
 	} else {
@@ -159,7 +160,7 @@ func TestDeepMapTypes(t *testing.T) {
 		"twelve": int64(12),
 		"three":  int64(3)}
 
-	err := DeepTypeCheck(expected3, testvar3, tc)
+	_, err := DeepTypeCheck(expected3, &testvar3, tc)
 	if err != nil {
 		fmt.Println("DeepTypeCheck returned error: " + err.Error())
 		t.Fail()
@@ -175,7 +176,7 @@ func TestSliceType(t *testing.T) {
 	var testvar4 interface{} = []*string{
 		new(string),
 		new(string)}
-	err := DeepTypeCheck(expected4, testvar4, tc)
+	_, err := DeepTypeCheck(expected4, &testvar4, tc)
 	if err != nil {
 		fmt.Println("DeepTypeCheck returned error: " + err.Error())
 	} else {
@@ -193,7 +194,7 @@ func TestSliceLength(t *testing.T) {
 	var testvar4 interface{} = []interface{}{}
 	//	"this": new(float64),
 	//	"these": []int{0, 1, 2}}
-	err := DeepTypeCheck(expected4, testvar4, tc)
+	_, err := DeepTypeCheck(expected4, &testvar4, tc)
 	if err != nil {
 		fmt.Println("DeepTypeCheck returned error: " + err.Error())
 	} else {
@@ -203,9 +204,58 @@ func TestSliceLength(t *testing.T) {
 
 type TestChecker struct{}
 
-func (tc TestChecker) Check(expected interface{}, variable interface{}) error {
+func (tc TestChecker) Check(expected interface{}, variable interface{}) (c interface{}, e error) {
 
 	fmt.Println("TestChecker: got expected: ", expected, " and variable: ", variable)
 
-	return nil
+	return c, e
+}
+
+func TestPersuadeDeepMapTypes(t *testing.T) {
+
+	fmt.Println("\nDeepTypePersuade: testing deep map types")
+
+	// this setup shows that testvar3 contains int32 values!?!?
+	var expected3 interface{} = map[string]interface{}{
+		"twelve": new(int32),
+		"three":  int32(7)}
+	var testvar3 interface{} = map[string]interface{}{
+		"twelve": int64(12),
+		"three":  float64(3)}
+
+	ret, err := DeepTypePersuade(expected3, testvar3)
+	if err != nil {
+		fmt.Println("DeepTypePersuade returned error: " + err.Error())
+		t.Fail()
+	}
+
+	if !reflect.DeepEqual(map[string]interface{}{
+		"twelve": int32(12),
+		"three":  int32(3)}, ret) {
+		fmt.Println("expected and ret are not equal!")
+		t.Fail()
+	}
+}
+
+func TestDeepTypePersuadeErr(t *testing.T) {
+
+	fmt.Println("\nDeepTypePersuade: testing error")
+
+	// this setup shows that testvar3 contains int32 values!?!?
+	var expected3 interface{} = map[string]interface{}{
+		"str": ""}
+
+	var testvar3 interface{} = map[string]interface{}{
+		"str": int64(12)}
+
+	ret, err := DeepTypePersuade(expected3, testvar3)
+	if err != nil {
+		fmt.Println("DeepTypePersuade returned error: " + err.Error())
+		t.Fail()
+	}
+
+	if !reflect.DeepEqual(map[string]interface{}{"str": "12"}, ret) {
+		fmt.Println("expected and ret are not equal!")
+		t.Fail()
+	}
 }
