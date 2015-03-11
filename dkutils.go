@@ -154,7 +154,7 @@ func DeepTypeCheck(expected interface{}, variable interface{}, c Checker) (ret i
 	// check if etype is a pointer and set evalue
 	var evalue reflect.Value
 	if etype.Kind() == reflect.Ptr {
-		fmt.Println("removed pointer to expected value")
+		//fmt.Println("removed pointer to expected value")
 		evalue = reflect.Indirect(reflect.ValueOf(expected))
 		etype = reflect.TypeOf(evalue.Interface())
 
@@ -165,7 +165,7 @@ func DeepTypeCheck(expected interface{}, variable interface{}, c Checker) (ret i
 	// same for vtype
 	var vvalue reflect.Value
 	if vtype.Kind() == reflect.Ptr {
-		fmt.Println("removed pointer to variable value")
+		//fmt.Println("removed pointer to variable value")
 		vvalue = reflect.Indirect(reflect.ValueOf(variable))
 		vtype = reflect.TypeOf(vvalue.Interface())
 
@@ -173,7 +173,7 @@ func DeepTypeCheck(expected interface{}, variable interface{}, c Checker) (ret i
 		vvalue = reflect.ValueOf(variable)
 	}
 
-	fmt.Println("After pointer removal: etype: ", etype, ", vtype: ", vtype)
+	//fmt.Println("After pointer removal: etype: ", etype, ", vtype: ", vtype)
 
 	// maybe only check kind here? check type in the default case of the kind
 	// switch.
@@ -201,7 +201,7 @@ func DeepTypeCheck(expected interface{}, variable interface{}, c Checker) (ret i
 			if err != nil {
 				return nil, err
 			}
-			fmt.Println("DeepTypeCheck: setting vvalue")
+			//fmt.Println("DeepTypeCheck: setting vvalue")
 
 			// this causes panic when vvalue is unaddressable
 			//vvalue.Set(reflect.ValueOf(r))
@@ -229,7 +229,7 @@ func DeepTypeCheck(expected interface{}, variable interface{}, c Checker) (ret i
 			return nil, ErrDkutilsGeneric(msg)
 		}
 
-		fmt.Println("etype.Kind():", etype.Kind(), "vtype.Kind():", vtype.Kind())
+		//fmt.Println("etype.Kind():", etype.Kind(), "vtype.Kind():", vtype.Kind())
 
 		for k, _ := range newexp {
 
@@ -239,7 +239,7 @@ func DeepTypeCheck(expected interface{}, variable interface{}, c Checker) (ret i
 				continue
 			}
 
-			fmt.Println("-\ngoing deeper into expected key:", k, ", val:", newexp[k])
+			//fmt.Println("-\ngoing deeper into expected key:", k, ", val:", newexp[k])
 			r, err := DeepTypeCheck(newexp[k], newvar[k], c)
 			if err != nil {
 				return nil, ErrDkutilsGeneric("DeepTypeCheck: While checking " +
@@ -278,7 +278,7 @@ func DeepTypeCheck(expected interface{}, variable interface{}, c Checker) (ret i
 		fmt.Println("etype.Kind():", etype.Kind(), "vtype.Kind:", vtype.Kind())
 
 		for i, _ := range newexp {
-			fmt.Println("-\ngoing deeper into expected index:", i, ", val:", newexp[i])
+			//fmt.Println("-\ngoing deeper into expected index:", i, ", val:", newexp[i])
 			r, err := DeepTypeCheck(newexp[i], newvar[i], c)
 			if err != nil {
 				return nil, err
@@ -288,16 +288,12 @@ func DeepTypeCheck(expected interface{}, variable interface{}, c Checker) (ret i
 
 	default:
 
-		// now call c.Check()
-		fmt.Println("!!!!did the default")
-
 		ret, err = c.Check(evalue.Interface(), vvalue.Interface())
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	fmt.Println("~~~got to end!")
 	return ret, nil
 }
 
@@ -309,6 +305,8 @@ func DeepTypeCheck(expected interface{}, variable interface{}, c Checker) (ret i
 type Persuader struct{}
 
 func (p Persuader) Check(e interface{}, v interface{}) (converted interface{}, err error) {
+
+	fmt.Println("converting ", reflect.TypeOf(v), "to ", reflect.TypeOf(e))
 
 	switch e.(type) {
 	case int:
