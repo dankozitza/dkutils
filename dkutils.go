@@ -386,7 +386,7 @@ func DeepTypeSprintDepthIndent(i interface{}, depth int64, ind string) (ret stri
 
 	var indent string
 	for i := int64(0); i < depth; i++ {
-		indent = indent + ind
+		indent += ind
 	}
 
 	var printedtype string
