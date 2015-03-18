@@ -367,3 +367,141 @@ func DeepTypePersuade(expected interface{}, variable interface{}) (interface{}, 
 	var p Persuader
 	return DeepTypeCheck(expected, variable, p)
 }
+
+// DeepTypeSprint
+//
+// Calls DeepTypeSprintDepthIndent with default values for depth and indent.
+//
+func DeepTypeSprint(i interface{}) (string, error) {
+	return DeepTypeSprintDepthIndent(i, 0, "   ")
+}
+
+// DeepTypeSprintDepthIndent
+//
+// DeepTypeSprintDepthIndent will crawl through a data structure building a
+// string that shows the types of each element. It will not print memory
+// locations.
+//
+func DeepTypeSprintDepthIndent(i interface{}, depth int64, ind string) (ret string, err error) {
+
+	var indent string
+	for i := int64(0); i < depth; i++ {
+		indent = indent + ind
+	}
+
+	var printedtype string
+
+	itype := reflect.TypeOf(i)
+
+	if i == nil {
+		return indent + fmt.Sprint(itype) + "(\"<nil>\")\n", nil
+	}
+
+	printedtype = itype.String()
+
+	// check if itype is a pointer and set ivalue
+	var ivalue reflect.Value
+	if itype.Kind() == reflect.Ptr {
+		ivalue = reflect.Indirect(reflect.ValueOf(i))
+		itype = reflect.TypeOf(ivalue.Interface())
+
+	} else {
+		ivalue = reflect.ValueOf(i)
+	}
+
+	switch itype.Kind() {
+	case reflect.Map:
+
+		newi, ok := ivalue.Interface().(map[string]interface{})
+		if !ok {
+
+			// make a new map that is map[string]interface{}
+			newi = map[string]interface{}{}
+
+			mkeys := ivalue.MapKeys()
+
+			for _, k := range mkeys {
+				newi[k.Interface().(string)] = ivalue.MapIndex(k).Interface()
+			}
+		}
+
+		ret += indent + printedtype + "{\n"
+
+		for k, _ := range newi {
+
+			ret += indent + "-key[" + k + "]:\n"
+
+			r, err := DeepTypeSprintDepthIndent(newi[k], depth+1, ind)
+			if err != nil {
+				return ret, ErrDkutilsGeneric("DeepTypeSprintDepthIndent: While checking " +
+					"key " + k + ": " + err.Error())
+			}
+			ret += r
+		}
+
+		ret += indent + "}\n"
+
+	case reflect.Slice:
+
+		newi, ok := ivalue.Interface().([]interface{})
+		if !ok {
+
+			// make a new slice that is []interface{}
+			newi = make([]interface{}, ivalue.Len())
+
+			for index := 0; index < ivalue.Len(); index++ {
+				newi[index] = ivalue.Index(index).Interface()
+			}
+		}
+
+		ret += indent + printedtype + "{\n"
+
+		for index, _ := range newi {
+
+			ret += indent + "-index[" + fmt.Sprint(index) + "]:\n"
+
+			r, err := DeepTypeSprintDepthIndent(newi[index], depth+1, ind)
+			if err != nil {
+				return ret, ErrDkutilsGeneric("DeepTypeSprintDepthIndent: While checking " +
+					"index " + fmt.Sprint(index) + ": " + err.Error())
+			}
+			ret += r
+		}
+
+		ret += indent + "}\n"
+
+	case reflect.Struct:
+
+		ret += indent + printedtype + "{\n"
+
+		for index := 0; index < ivalue.NumField(); index++ {
+			iStructField := itype.Field(index)
+
+			ret += indent + "-field[" + iStructField.Name + "]:\n"
+
+			// if the field name does not start with an upper case letter skip it
+			if iStructField.PkgPath != "" {
+				ret += indent + ind + "<hidden field>\n"
+				continue
+			}
+
+			r, err := DeepTypeSprintDepthIndent(
+				ivalue.Field(index).Interface(),
+				depth+1,
+				ind)
+			if err != nil {
+				return ret, ErrDkutilsGeneric("DeepTypeSprintDepthIndent: While checking " +
+					"field " + iStructField.Name + ": " + err.Error())
+			}
+			ret += r
+		}
+
+		ret += indent + "}\n"
+
+	default:
+
+		ret += indent + printedtype + "(\"" + fmt.Sprint(ivalue.Interface()) + "\")\n"
+	}
+
+	return ret, nil
+}

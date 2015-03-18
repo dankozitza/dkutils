@@ -259,3 +259,114 @@ func TestDeepTypePersuadeErr(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestDeepTypeSprintNil(t *testing.T) {
+
+	fmt.Println("\nDeeptTypeSprint: testing nil")
+
+	var input interface{}
+
+	ret, err := DeepTypeSprint(input)
+	if err != nil {
+		fmt.Println("DeepTypeSprint returned error: " + err.Error())
+		t.Fail()
+	}
+
+	if ret != "<nil>(\"<nil>\")\n" {
+		fmt.Println("DeypTypeSprint did not return the expected value!\n" +
+			"ret:\n" + ret)
+		t.Fail()
+	}
+}
+
+func TestDeepTypeSprintString(t *testing.T) {
+
+	fmt.Println("\nDeeptTypeSprint: testing string")
+
+	input := "this is the input"
+
+	ret, err := DeepTypeSprint(input)
+	if err != nil {
+		fmt.Println("DeepTypeSprint returned error: " + err.Error())
+		t.Fail()
+	}
+
+	if ret != "string(\"this is the input\")\n" {
+		fmt.Println("DeypTypeSprint did not return the expected value!\n" +
+			"ret: " + ret)
+		t.Fail()
+	}
+}
+
+func TestDeepTypeSprintInt(t *testing.T) {
+
+	fmt.Println("\nDeeptTypeSprint: testing int")
+
+	input := 42
+
+	ret, err := DeepTypeSprint(input)
+	if err != nil {
+		fmt.Println("DeepTypeSprint returned error: " + err.Error())
+		t.Fail()
+	}
+
+	if ret != "int(\"42\")\n" {
+		fmt.Println("DeypTypeSprint did not return the expected value!\n" +
+			"ret: " + ret)
+		t.Fail()
+	}
+}
+
+func TestDeepTypeSprintDataStructure(t *testing.T) {
+
+	fmt.Println("\nDeeptTypeSprint: testing data structure")
+
+	input := map[string]interface{}{
+		"KEY_ONE_DEPTH_0": "VAL_ONE_DEPTH_0",
+		"KEY_TWO_DEPTH_0": []interface{}{
+			"ARRAY_ELEMENT_0",
+			"ARRAY_ELEMENT_1",
+			3,
+			int64(4),
+			map[string]interface{}{
+				"DEEP_KEY_ONE": 7,
+				"DEEP_KEY_TWO": "blah",
+			},
+		},
+	}
+
+	ret, err := DeepTypeSprint(input)
+	if err != nil {
+		fmt.Println("DeepTypeSprint returned error: " + err.Error())
+		t.Fail()
+	}
+
+	// this can pass or fail depending on the order of the maps keys
+	if ret != "map[string]interface {}{\n"+
+		"-key[KEY_ONE_DEPTH_0]:\n"+
+		"   string(\"VAL_ONE_DEPTH_0\")\n"+
+		"-key[KEY_TWO_DEPTH_0]:\n"+
+		"   []interface {}{\n"+
+		"   -index[0]:\n"+
+		"      string(\"ARRAY_ELEMENT_0\")\n"+
+		"   -index[1]:\n"+
+		"      string(\"ARRAY_ELEMENT_1\")\n"+
+		"   -index[2]:\n"+
+		"      int(\"3\")\n"+
+		"   -index[3]:\n"+
+		"      int64(\"4\")\n"+
+		"   -index[4]:\n"+
+		"      map[string]interface {}{\n"+
+		"      -key[DEEP_KEY_ONE]:\n"+
+		"         int(\"7\")\n"+
+		"      -key[DEEP_KEY_TWO]:\n"+
+		"         string(\"blah\")\n"+
+		"      }\n"+
+		"   }\n"+
+		"}\n" {
+
+		fmt.Println("DeepTypeSprint did not return the expected value!\n" +
+			"ret:\n" + ret)
+		t.Fail()
+	}
+}
