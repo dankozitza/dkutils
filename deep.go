@@ -1,6 +1,12 @@
 package dkutils
 
-type Comparison interface{}{
+type Comparison interface {
+	// Compare
+	//
+	// Takes a and b and returns an interface. What is returned may depend on
+	// a specific implementation of Compare. In most cases it will return some
+	// combination of a and b.
+	//
 	Compare(a interface{}, b interface{}) (interface{}, error)
 }
 
