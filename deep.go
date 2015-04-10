@@ -10,6 +10,14 @@ type Comparison interface {
 	Compare(a interface{}, b interface{}) (interface{}, error)
 }
 
+type Differ map[string]interface{}
+func (d Differ) Compare(a interface{}, b interface{}) (interface{}, error) {
+	if a != b {
+		return false, ErrDkutilsGeneric("a does not equal b")
+	}
+	return true, nil
+}
+
 // DeepCompare
 //
 // Ranges over the data structures a and b calling c.Compare() on every pair of
@@ -23,4 +31,7 @@ type Comparison interface {
 //       // c.Compare(this["cats"][0], nil),
 //       // c.Compare(this["cats"][1], nil),
 //
-func DeepCompare(a interface{}, b interface{}, c Comparison)
+// Breakdown for comparison of nested data structures in Perl:
+//	http://www.perlmonks.org/?node_id=752326
+// 
+func DeepCompare(a interface{}, b interface{}, c Comparison) {}

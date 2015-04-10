@@ -123,7 +123,10 @@ type Checker interface {
 // to a Checker. If a Checker returns an error DeepTypeCheck stops crawling
 // and returns the error to the caller.
 //
-func DeepTypeCheck(expected interface{}, variable interface{}, c Checker) (ret interface{}, err error) {
+func DeepTypeCheck(
+	expected interface{},
+	variable interface{},
+	c Checker) (ret interface{}, err error) {
 
 	if expected == nil && variable == nil {
 		return nil, fmt.Errorf("expected and variable are nil")
