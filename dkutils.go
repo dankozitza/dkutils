@@ -13,6 +13,7 @@ func (e ErrDkutilsGeneric) Error() string {
 }
 
 type niltype struct{}
+type invalidtype struct{}
 
 // ForceType
 //
@@ -406,6 +407,9 @@ func DeepTypeSprintDepthIndent(i interface{}, depth int64, ind string) (ret stri
 	var ivalue reflect.Value
 	if itype.Kind() == reflect.Ptr {
 		ivalue = reflect.Indirect(reflect.ValueOf(i))
+		if !ivalue.IsValid() {
+			ivalue = reflect.ValueOf(invalidtype{})
+		}
 		itype = reflect.TypeOf(ivalue.Interface())
 
 	} else {
