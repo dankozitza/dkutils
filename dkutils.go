@@ -59,7 +59,7 @@ func ForceType(v interface{}, d interface{}) error {
 		if fmt.Sprint(vvalue.Addr()) != "<*interface {} Value>" {
 			msg = "ForceType: vvalue.Addr(): " + fmt.Sprint(vvalue.Addr()) +
 				" must be <*interface {} Value>"
-			panic(ErrDkutilsGeneric(msg))
+			//panic(ErrDkutilsGeneric(msg))
 		}
 	}
 
@@ -310,7 +310,7 @@ type Persuader struct{}
 
 func (p Persuader) Check(e interface{}, v interface{}) (converted interface{}, err error) {
 
-	fmt.Println("converting ", reflect.TypeOf(v), "to ", reflect.TypeOf(e))
+	//fmt.Println("converting ", reflect.TypeOf(v), "to ", reflect.TypeOf(e))
 
 	switch e.(type) {
 	case int:
